@@ -11,30 +11,62 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['delete_id'])) {
-        $user_id = $_POST['delete_id'];
-        $deleteSql = "DELETE FROM student WHERE user_id = $user_id";
-        if ($conn->query($deleteSql) === TRUE) {
-            echo "Record deleted successfully";
+    $name = $_POST['name'];
+    $email = $_POST['email'];
+    $phone = $_POST['phone'];
+    $course = $_POST['course'];
+
+    // Server-side validation
+    $errors = [];
+
+    if (empty($name)) {
+        $errors[] = "Name is required.";
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Valid email is required.";
+    }
+
+    if (empty($phone) || !preg_match('/^\d{10}$/', $phone)) {
+        $errors[] = "Valid 10-digit phone number is required.";
+    }
+
+    if (empty($course)) {
+        $errors[] = "Course selection is required.";
+    }
+
+    if (empty($errors)) {
+        if (isset($_POST['delete_id'])) {
+            $user_id = $_POST['delete_id'];
+            $deleteSql = "DELETE FROM student WHERE user_id = $user_id";
+            if ($conn->query($deleteSql) === TRUE) {
+                echo "Record deleted successfully";
+            } else {
+                echo "Error deleting record: " . $conn->error;
+            }
+        } elseif (isset($_POST['edit_id'])) {
+            $user_id = $_POST['edit_id'];
+            $updateSql = "UPDATE student SET name='$name', email='$email', phone='$phone', course='$course' WHERE user_id=$user_id";
+            if ($conn->query($updateSql) === TRUE) {
+                echo "Record updated successfully";
+            } else {
+                echo "Error updating record: " . $conn->error;
+            }
         } else {
-            echo "Error deleting record: " . $conn->error;
+            $sql = "INSERT INTO student (name, email, phone, course) VALUES ('$name', '$email', '$phone', '$course')";
+            if ($conn->query($sql) === TRUE) {
+                echo "New record created successfully";
+            } else {
+                echo "Error: " . $sql . "<br>" . $conn->error;
+            }
         }
+        header("Location: " . $_SERVER["PHP_SELF"]);
+        exit;
     } else {
-        $phone = $_POST['phone'];
-        $name = $_POST['name'];
-        $email = $_POST['email'];
-        $course = $_POST['course'];
-
-        $sql = "INSERT INTO student (name, email, course, phone) VALUES ('$name', '$email', '$course', '$phone')";
-
-        if ($conn->query($sql) === TRUE) {
-            echo "New record created successfully";
-        } else {
-            echo "Error: " . $sql . "<br>" . $conn->error;
+        foreach ($errors as $error) {
+            echo "<script>alert('$error');</script>";
         }
     }
-    header("Location: " . $_SERVER["PHP_SELF"]);
-    exit;
 }
 
 $fetch = "SELECT * FROM student";
@@ -113,12 +145,11 @@ $result = $conn->query($fetch);
                         <td><?php echo htmlspecialchars($row['phone']); ?></td>
                         <td><?php echo htmlspecialchars($row['course']); ?></td>
                         <td>
-                            <form method="post" action="edit.php" style="display:inline;">
-                                <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($row['user_id']); ?>">
-                                <input type="submit" value="Edit">
-                            </form>
-                            <button type="button" class="viewBtn" data-name="<?php echo htmlspecialchars($row['name']); ?>" data-email="<?php echo htmlspecialchars($row['email']); ?>" data-phone="<?php echo htmlspecialchars($row['phone']); ?>" data-course="<?php echo htmlspecialchars($row['course']); ?>">
+                            <button type="button" class="viewBtn" data-id="<?php echo htmlspecialchars($row['user_id']); ?>" data-name="<?php echo htmlspecialchars($row['name']); ?>" data-email="<?php echo htmlspecialchars($row['email']); ?>" data-phone="<?php echo htmlspecialchars($row['phone']); ?>" data-course="<?php echo htmlspecialchars($row['course']); ?>">
                                 View
+                            </button>
+                            <button type="button" class="editBtn" data-id="<?php echo htmlspecialchars($row['user_id']); ?>" data-name="<?php echo htmlspecialchars($row['name']); ?>" data-email="<?php echo htmlspecialchars($row['email']); ?>" data-phone="<?php echo htmlspecialchars($row['phone']); ?>" data-course="<?php echo htmlspecialchars($row['course']); ?>">
+                                Edit
                             </button>
                             <form method="post" style="display:inline;">
                                 <input type="hidden" name="delete_id" value="<?php echo htmlspecialchars($row['user_id']); ?>">
@@ -137,6 +168,7 @@ $result = $conn->query($fetch);
         <div class="modal-content">
             <span class="close">&times;</span>
             <form class="form" id="studentForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                <input type="hidden" id="edit_id" name="edit_id">
                 <label for="name" class="lname">Name:</label>
                 <input type="text" id="name" class="name" name="name" required>
                 <br>
@@ -155,7 +187,7 @@ $result = $conn->query($fetch);
                     <input type="radio" id="AIML" name="course" value="AIML">
                     <label for="AIML">AIML</label><br><br>
                 </div>
-                <input type="submit" id="submitBtn" value="Submit" class="submit">
+                <input type="submit" id="submitBtn" value="Submit">
             </form>
         </div>
     </div>
@@ -165,10 +197,13 @@ $result = $conn->query($fetch);
         var btn = document.getElementById("myBtn");
         var span = document.getElementsByClassName("close")[0];
         var submitBtn = document.getElementById("submitBtn");
+        var form = document.getElementById('studentForm');
+        var editIdInput = document.getElementById('edit_id');
 
         btn.onclick = function() {
-            document.getElementById('studentForm').reset();
+            form.reset();
             setFormEditable(true);
+            editIdInput.value = '';
             modal.style.display = "block";
         }
 
@@ -184,18 +219,37 @@ $result = $conn->query($fetch);
 
         document.querySelectorAll('.viewBtn').forEach(button => {
             button.onclick = function() {
+                const id = this.getAttribute('data-id');
                 const name = this.getAttribute('data-name');
                 const email = this.getAttribute('data-email');
                 const phone = this.getAttribute('data-phone');
                 const course = this.getAttribute('data-course');
-                
+
                 document.getElementById('name').value = name;
                 document.getElementById('email').value = email;
                 document.getElementById('phone').value = phone;
-
                 document.getElementById(course).checked = true;
 
                 setFormEditable(false);
+                modal.style.display = 'block';
+            }
+        });
+
+        document.querySelectorAll('.editBtn').forEach(button => {
+            button.onclick = function() {
+                const id = this.getAttribute('data-id');
+                const name = this.getAttribute('data-name');
+                const email = this.getAttribute('data-email');
+                const phone = this.getAttribute('data-phone');
+                const course = this.getAttribute('data-course');
+
+                document.getElementById('name').value = name;
+                document.getElementById('email').value = email;
+                document.getElementById('phone').value = phone;
+                document.getElementById(course).checked = true;
+
+                setFormEditable(true);
+                editIdInput.value = id;
                 modal.style.display = 'block';
             }
         });
@@ -211,6 +265,31 @@ $result = $conn->query($fetch);
 
             submitBtn.disabled = !editable;
         }
+
+        form.onsubmit = function(event) {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const course = document.querySelector('input[name="course"]:checked');
+
+            if (!name || !email || !phone || !course) {
+                event.preventDefault();
+                alert("Please fill out all fields.");
+                return false;
+            }
+
+            if (!/^\d{10}$/.test(phone)) {
+                event.preventDefault();
+                alert("Please enter a valid 10-digit phone number.");
+                return false;
+            }
+
+            if (!/\S+@\S+\.\S+/.test(email)) {
+                event.preventDefault();
+                alert("Please enter a valid email address.");
+                return false;
+            }
+        };
     </script>
 </body>
 </html>
