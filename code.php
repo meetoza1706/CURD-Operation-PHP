@@ -11,60 +11,62 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $phone = $_POST['phone'];
-    $course = $_POST['course'];
-
-    // Server-side validation
-    $errors = [];
-
-    if (empty($name)) {
-        $errors[] = "Name is required.";
-    }
-
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = "Valid email is required.";
-    }
-
-    if (empty($phone) || !preg_match('/^\d{10}$/', $phone)) {
-        $errors[] = "Valid 10-digit phone number is required.";
-    }
-
-    if (empty($course)) {
-        $errors[] = "Course selection is required.";
-    }
-
-    if (empty($errors)) {
-        if (isset($_POST['delete_id'])) {
-            $user_id = $_POST['delete_id'];
-            $deleteSql = "DELETE FROM student WHERE user_id = $user_id";
-            if ($conn->query($deleteSql) === TRUE) {
-                echo "Record deleted successfully";
-            } else {
-                echo "Error deleting record: " . $conn->error;
-            }
-        } elseif (isset($_POST['edit_id'])) {
-            $user_id = $_POST['edit_id'];
-            $updateSql = "UPDATE student SET name='$name', email='$email', phone='$phone', course='$course' WHERE user_id=$user_id";
-            if ($conn->query($updateSql) === TRUE) {
-                echo "Record updated successfully";
-            } else {
-                echo "Error updating record: " . $conn->error;
-            }
+    if (isset($_POST['delete_id'])) {
+        $user_id = $_POST['delete_id'];
+        $deleteSql = "DELETE FROM student WHERE user_id = $user_id";
+        if ($conn->query($deleteSql) === TRUE) {
+            echo "<script>alert('Record deleted successfully');</script>";
         } else {
-            $sql = "INSERT INTO student (name, email, phone, course) VALUES ('$name', '$email', '$phone', '$course')";
-            if ($conn->query($sql) === TRUE) {
-                echo "New record created successfully";
-            } else {
-                echo "Error: " . $sql . "<br>" . $conn->error;
-            }
+            echo "<script>alert('Error deleting record: " . $conn->error . "');</script>";
         }
-        header("Location: " . $_SERVER["PHP_SELF"]);
-        exit;
     } else {
-        foreach ($errors as $error) {
-            echo "<script>alert('$error');</script>";
+        $name = $_POST['name'];
+        $email = $_POST['email'];
+        $phone = $_POST['phone'];
+        $course = $_POST['course'];
+
+        // Server-side validation
+        $errors = [];
+
+        if (empty($name)) {
+            $errors[] = "Name is required.";
+        }
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = "Valid email is required.";
+        }
+
+        if (empty($phone) || !preg_match('/^\d{10}$/', $phone)) {
+            $errors[] = "Valid 10-digit phone number is required.";
+        }
+
+        if (empty($course)) {
+            $errors[] = "Course selection is required.";
+        }
+
+        if (empty($errors)) {
+            if (isset($_POST['edit_id']) && !empty($_POST['edit_id'])) {
+                $user_id = $_POST['edit_id'];
+                $updateSql = "UPDATE student SET name='$name', email='$email', phone='$phone', course='$course' WHERE user_id=$user_id";
+                if ($conn->query($updateSql) === TRUE) {
+                    echo "<script>alert('Record updated successfully');</script>";
+                } else {
+                    echo "<script>alert('Error updating record: " . $conn->error . "');</script>";
+                }
+            } else {
+                $sql = "INSERT INTO student (name, email, phone, course) VALUES ('$name', '$email', '$phone', '$course')";
+                if ($conn->query($sql) === TRUE) {
+                    echo "<script>alert('New record created successfully');</script>";
+                } else {
+                    echo "<script>alert('Error: " . $sql . "<br>" . $conn->error . "');</script>";
+                }
+            }
+            header("Location: " . $_SERVER["PHP_SELF"]);
+            exit;
+        } else {
+            foreach ($errors as $error) {
+                echo "<script>alert('$error');</script>";
+            }
         }
     }
 }
@@ -187,7 +189,7 @@ $result = $conn->query($fetch);
                     <input type="radio" id="AIML" name="course" value="AIML">
                     <label for="AIML">AIML</label><br><br>
                 </div>
-                <input type="submit" id="submitBtn" value="Submit">
+                <input type="submit" id="submitBtn" value="Submit" class="submit">
             </form>
         </div>
     </div>
