@@ -80,7 +80,7 @@ $result = $conn->query($fetch);
 <head>
     <title>CRUD operations</title>
     <link rel="stylesheet" href="style1.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">    
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <style>
@@ -172,13 +172,13 @@ $result = $conn->query($fetch);
             <form class="form" id="studentForm" method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                 <input type="hidden" id="edit_id" name="edit_id">
                 <label for="name" class="lname">Name:</label>
-                <input type="text" id="name" class="name" name="name" required>
+                <input type="text" id="name" class="name" name="name" >
                 <br>
                 <label for="email" class="lemail">Email:</label>
-                <input type="email" id="email" class="email" name="email" required>
+                <input type="email" id="email" class="email" name="email" >
                 <br>
                 <label for="phone" class="lphone">Phone:</label>
-                <input type="text" id="phone" name="phone" class="phone" required>
+                <input type="text" id="phone" name="phone" class="phone" >
                 <br>
                 <div class="radio">
                     <p>Choose Course:</p>
